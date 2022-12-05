@@ -5,6 +5,7 @@ use std::fmt::Result;
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Token {
     String(String), //
+    Ident(String),  //
     Ampersand,      // &
     Dollar,         // $
     Equal,          // =
@@ -18,6 +19,7 @@ impl Display for Token {
     fn fmt(&self, tkn: &mut Formatter) -> Result {
         match self {
             Token::String(string) => write!(tkn, "{string}"),
+            Token::Ident(string) => write!(tkn, "{string}"),
             Token::Equal => write!(tkn, "="),
             Token::Ampersand => write!(tkn, "&"),
             Token::Dollar => write!(tkn, "$"),
