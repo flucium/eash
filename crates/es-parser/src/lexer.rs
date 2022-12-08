@@ -33,6 +33,7 @@ impl Lexer {
                         }
                     }
                 }
+                ';' => return Some(Token::Semicolon),
                 '=' => return Some(Token::Equal),
                 '|' => return Some(Token::Pipe),
                 '>' => return Some(Token::Gt),
