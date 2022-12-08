@@ -6,7 +6,7 @@ use std::fmt::Result;
 pub enum Token {
     String(String), //
     Ident(String),  //
-    Number(usize),  // 0 ~ 9
+    Number(isize),  // 0 ~ 9
     Ampersand,      // &
     Dollar,         // $
     Equal,          // =
