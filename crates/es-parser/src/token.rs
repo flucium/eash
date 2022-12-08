@@ -6,6 +6,7 @@ use std::fmt::Result;
 pub enum Token {
     String(String), //
     Ident(String),  //
+    Number(usize),  // 0 ~ 9
     Ampersand,      // &
     Dollar,         // $
     Equal,          // =
@@ -20,6 +21,7 @@ impl Display for Token {
         match self {
             Token::String(string) => write!(tkn, "{string}"),
             Token::Ident(string) => write!(tkn, "{string}"),
+            Token::Number(n) => write!(tkn, "{n}"),
             Token::Equal => write!(tkn, "="),
             Token::Ampersand => write!(tkn, "&"),
             Token::Dollar => write!(tkn, "$"),
