@@ -40,8 +40,19 @@ impl Lexer {
                 '&' => return Some(Token::Ampersand),
                 '$' => return Some(Token::Dollar),
                 '"' => return Some(Token::String(self.read_string(true))),
-                // ch @ '0'..='9' => {}
-                _ => return Some(Token::String(self.read_string(false))),
+                // ch @ '0'..='9' => {
+
+                // }
+                _ => {
+                    let mut string = String::from(ch);
+
+                    string.push_str(&self.read_string(false));
+
+                    return Some(match string.parse::<isize>() {
+                        Ok(n) => Token::Number(n),
+                        Err(_) => Token::String(string),
+                    });
+                }
             }
         }
 
