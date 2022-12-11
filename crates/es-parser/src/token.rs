@@ -6,15 +6,15 @@ use std::fmt::Result;
 pub enum Token {
     String(String), //
     Ident(String),  //
-    // Number(isize),  // 0 ~ 9
-    FD(i32),   // 0 ~ 9
-    Ampersand, // &
-    Dollar,    // $
-    Equal,     // =
-    Pipe,      // |
-    Gt,        // >
-    Lt,        // <
-    Semicolon, // ;
+    Number(isize),  // 0 ~ 9
+    FD(i32),        // 0 ~ 9
+    Ampersand,      // &
+    Dollar,         // $
+    Equal,          // =
+    Pipe,           // |
+    Gt,             // >
+    Lt,             // <
+    Semicolon,      // ;
 }
 
 impl Display for Token {
@@ -22,7 +22,7 @@ impl Display for Token {
         match self {
             Token::String(string) => write!(tkn, "{string}"),
             Token::Ident(string) => write!(tkn, "{string}"),
-            // Token::Number(n) => write!(tkn, "{n}"),
+            Token::Number(n) => write!(tkn, "{n}"),
             Token::FD(n) => write!(tkn, "{n}"),
             Token::Equal => write!(tkn, "="),
             Token::Ampersand => write!(tkn, "&"),
