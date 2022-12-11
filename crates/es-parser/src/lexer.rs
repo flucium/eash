@@ -43,7 +43,7 @@ impl Lexer {
                     if matches!(self.input.get(0), Some('0'..='9')) {
                         let mut string = self.read_string(false);
 
-                        if let Ok(n) = string.parse::<i32>() {
+                        if let Ok(n) = string.parse::<u32>() {
                             return Some(Token::FD(n));
                         }
 

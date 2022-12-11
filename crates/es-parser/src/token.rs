@@ -7,7 +7,7 @@ pub enum Token {
     String(String), //
     Ident(String),  //
     Number(isize),  // 0 ~ 9
-    FD(i32),        // 0 ~ 9
+    FD(u32),        // 0 ~ 9
     Ampersand,      // &
     Dollar,         // $
     Equal,          // =
