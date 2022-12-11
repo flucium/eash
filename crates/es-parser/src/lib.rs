@@ -25,11 +25,49 @@ impl Parser {
     }
 
     fn parse_command(&mut self) -> Result<Option<Node>> {
-        Ok(None)
+        let prefix = match self.parse_command_prefix()? {
+            Some(prefix) => prefix,
+            None => return Ok(None),
+        };
+
+        let suffix = self.parse_command_suffix()?;
+
+        let mut command = Command::new();
+        command.insert_prefix(prefix);
+        command.insert_suffix(suffix);
+
+        Ok(Some(Node::Command(command)))
     }
 
-    pub fn parse_command_suffix(&mut self) -> Result<CommandSuffix> {
+    fn parse_command_suffix(&mut self) -> Result<CommandSuffix> {
         let mut suffix = CommandSuffix::new();
+
+        loop {
+            if let Some(peek_token) = self.lexer.peek() {
+                if matches!(peek_token, Token::Pipe | Token::Semicolon) {
+                    break;
+                }
+            } else {
+                break;
+            }
+
+            if let Some(node) = self.parse_variable() {
+                suffix.insert(node)
+            }
+
+            if let Some(node) = self.parse_string().or_else(|| self.parse_number()) {
+                suffix.insert(node)
+            }
+
+            if let Some(node) = self.parse_redirect()? {
+                suffix.insert(node)
+            }
+
+            if let Some(node) = self.parse_background() {
+                suffix.insert(node);
+                break;
+            }
+        }
 
         Ok(suffix)
     }
@@ -41,6 +79,13 @@ impl Parser {
         {
             Some(prefix) => Ok(Some(prefix)),
             None => Ok(None),
+        }
+    }
+
+    fn parse_background(&mut self) -> Option<Node> {
+        match self.lexer.next_if_eq(&Token::Ampersand).is_some() {
+            true => Some(Node::Background(true)),
+            false => None,
         }
     }
 
@@ -269,7 +314,10 @@ impl Command {
     }
 
     fn insert_suffix(&mut self, suffix: CommandSuffix) {
-        self.suffix = Some(Box::new(suffix))
+        if suffix.node.is_some() {
+            self.suffix = Some(Box::new(suffix))
+        }
+        
     }
 }
 
