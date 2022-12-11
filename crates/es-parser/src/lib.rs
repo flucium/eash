@@ -7,12 +7,6 @@ use es_error::ErrorKind;
 use es_error::Result;
 use std::iter::Peekable;
 
-pub type Pipe = Tree;
-
-pub type CommandSuffix = Tree;
-
-pub type Block = Tree;
-
 pub struct Parser {
     lexer: Peekable<Lexer>,
 }
@@ -22,6 +16,94 @@ impl Parser {
         Self {
             lexer: lexer.peekable(),
         }
+    }
+
+    pub fn parse(&mut self) -> Result<Node> {
+        let mut is_pipe = false;
+
+        let mut block = Block::new();
+
+        loop {
+            let mut nodes = Vec::new();
+            loop {
+                if let Some(node) = self.parse_assignment()? {
+                    nodes.push(node);
+                    continue;
+                }
+
+                if let Some(node) = self.parse_redirect()? {
+                    nodes.push(node);
+                    continue;
+                }
+
+                if let Some(node) = self.parse_command()? {
+                    nodes.push(node);
+                    continue;
+                }
+
+                if self.lexer.next_if_eq(&Token::Pipe).is_some() {
+                    is_pipe = true;
+                    continue;
+                }
+
+                if self.lexer.next_if_eq(&Token::Semicolon).is_some() {
+                    break;
+                }
+
+                if self.lexer.peek().is_some() {
+                    Err(Error::new(
+                        ErrorKind::IllegalSyntax,
+                        format!("unknown token: {}", self.lexer.peek().unwrap()),
+                    ))?;
+                } else {
+                    break;
+                }
+            }
+
+            if is_pipe {
+                let mut pipe = Pipe::new();
+
+                for node in nodes {
+                    pipe.insert(node)
+                }
+
+                block.insert(Node::Pipe(pipe));
+            } else {
+                for node in nodes {
+                    block.insert(node)
+                }
+            }
+
+            if self.lexer.peek().is_none() {
+                break;
+            }
+
+            is_pipe = false;
+        }
+
+        Ok(Node::Block(block))
+    }
+
+    fn parse_assignment(&mut self) -> Result<Option<Node>> {
+        let ident = match self.parse_variable() {
+            Some(ident) => ident,
+            None => return Ok(None),
+        };
+
+        if matches!(self.lexer.next(), Some(Token::Equal)) == false {
+            Err(Error::new(ErrorKind::IllegalSyntax, "".to_owned()))?
+        }
+
+        let value = match self.parse_string().or_else(|| self.parse_number()) {
+            Some(node) => node,
+            None => Err(Error::new(ErrorKind::IllegalSyntax, "".to_owned()))?,
+        };
+
+        let mut assignment = Assignment::new();
+        assignment.insert_ident(ident);
+        assignment.insert_value(value);
+
+        Ok(Some(Node::Assignment(assignment)))
     }
 
     fn parse_command(&mut self) -> Result<Option<Node>> {
@@ -284,7 +366,7 @@ impl Assignment {
 #[derive(Debug, Clone)]
 pub struct Command {
     prefix: Option<Box<Node>>,
-    suffix: Option<Box<CommandSuffix>>,
+    suffix: Option<CommandSuffix>,
 }
 
 impl Command {
@@ -304,7 +386,7 @@ impl Command {
 
     pub fn take_suffix(&mut self) -> Option<CommandSuffix> {
         match self.suffix.take() {
-            Some(suffix) => Some(*suffix),
+            Some(suffix) => Some(suffix),
             None => None,
         }
     }
@@ -314,10 +396,70 @@ impl Command {
     }
 
     fn insert_suffix(&mut self, suffix: CommandSuffix) {
-        if suffix.node.is_some() {
-            self.suffix = Some(Box::new(suffix))
-        }
-        
+        self.suffix = Some(suffix)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Pipe(Tree);
+
+impl Pipe {
+    fn new() -> Self {
+        Self { 0: Tree::new() }
+    }
+
+    pub fn is_child(&self) -> bool {
+        self.0.is_child()
+    }
+
+    pub fn take(&mut self) -> Option<Node> {
+        self.0.take()
+    }
+
+    fn insert(&mut self, node: Node) {
+        self.0.insert(node)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Block(Tree);
+
+impl Block {
+    fn new() -> Self {
+        Self { 0: Tree::new() }
+    }
+
+    pub fn is_child(&self) -> bool {
+        self.0.is_child()
+    }
+
+    pub fn take(&mut self) -> Option<Node> {
+        self.0.take()
+    }
+
+    fn insert(&mut self, node: Node) {
+        self.0.insert(node)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CommandSuffix(Tree);
+
+impl CommandSuffix {
+    fn new() -> Self {
+        Self { 0: Tree::new() }
+    }
+
+    pub fn is_child(&self) -> bool {
+        self.0.is_child()
+    }
+
+    pub fn take(&mut self) -> Option<Node> {
+        self.0.take()
+    }
+
+    fn insert(&mut self, node: Node) {
+        self.0.insert(node)
     }
 }
 
