@@ -38,8 +38,33 @@ impl Lexer {
                 '|' => return Some(Token::Pipe),
                 '>' => return Some(Token::Gt),
                 '<' => return Some(Token::Lt),
-                '&' => return Some(Token::Ampersand),
-                '$' => return Some(Token::Dollar),
+                // '&' => {return Some(Token::Ampersand)},
+                '&' => {
+                    if matches!(self.input.get(0), Some('0'..='9')) {
+                        let mut string = self.read_string(false);
+
+                        if let Ok(n) = string.parse::<i32>() {
+                            return Some(Token::FD(n));
+                        }
+
+                        while let Some(ch) =string.pop(){
+                            self.input.push_front(ch)
+                        }
+                    }
+
+                    return Some(Token::Ampersand);
+                }
+                '$' => {
+                    // input[0] == (a - z || A - Z || 0 - 9)
+                    if matches!(
+                        self.input.get(0),
+                        Some('a'..='z') | Some('A'..='Z') | Some('0'..='9')
+                    ) {
+                        return Some(Token::Ident(self.read_string(false)));
+                    }
+
+                    return Some(Token::Dollar);
+                }
                 '"' => return Some(Token::String(self.read_string(true))),
                 // ch @ '0'..='9' => {
 
@@ -49,10 +74,11 @@ impl Lexer {
 
                     string.push_str(&self.read_string(false));
 
-                    return Some(match string.parse::<isize>() {
-                        Ok(n) => Token::Number(n),
-                        Err(_) => Token::String(string),
-                    });
+                    if let Ok(n) = string.parse::<isize>() {
+                        return Some(Token::Number(n));
+                    }
+
+                    return Some(Token::String(string));
                 }
             }
         }
