@@ -101,14 +101,12 @@ impl Parser {
     }
 
     pub fn parse_redirect(&mut self) -> Result<Option<Node>> {
+        let mut kind: Option<RedirectKind> = None;
         let mut left: Option<Node> = None;
         let mut right: Option<Node> = None;
-        let mut kind: Option<RedirectKind> = None;
 
         match self.parse_fd() {
-            Some(node) => {
-                left = Some(node);
-            }
+            Some(node) => left = Some(node),
             None => match self.lexer.peek() {
                 Some(Token::Gt) => left = Some(Node::FD(1)),
                 Some(Token::Lt) => left = Some(Node::FD(0)),
@@ -117,34 +115,25 @@ impl Parser {
         }
 
         match self.lexer.next() {
-            Some(token) => match token {
-                Token::Gt => {
-                    kind = Some(RedirectKind::Write);
-                }
-                Token::Lt => {
-                    kind = Some(RedirectKind::Read);
-                }
-                _ => Err(Error::new(ErrorKind::IllegalSyntax, "".to_owned()))?,
-            },
-            None => Err(Error::new(ErrorKind::IllegalSyntax, "".to_owned()))?,
+            Some(Token::Gt) => kind = Some(RedirectKind::Write),
+            Some(Token::Lt) => kind = Some(RedirectKind::Read),
+            _ => Err(Error::new(ErrorKind::IllegalSyntax, "".to_owned()))?,
         }
 
         match self
             .parse_string()
             .or_else(|| self.parse_number().or_else(|| self.parse_fd()))
         {
-            Some(node) => {
-                right = Some(node);
-            }
+            Some(node) => right = Some(node),
             None => Err(Error::new(ErrorKind::IllegalSyntax, "".to_owned()))?,
         }
 
         let mut redirect = Redirect::new(kind.unwrap());
         redirect.insert_left(left.unwrap());
         redirect.insert_right(right.unwrap());
-
         Ok(Some(Node::Redirect(redirect)))
     }
+   
 }
 
 #[derive(Debug, Clone)]
