@@ -34,16 +34,15 @@ impl Parser {
         Ok(suffix)
     }
 
-    // fn parse_command_prefix(&mut self) -> Result<Option<Node>> {
-    //     // command prefix can be a String or Number , Variable
-    //     match self
-    //         .parse_variable()?
-    //         .or_else(|| self.parse_string().or_else(|| self.parse_number()))
-    //     {
-    //         Some(prefix) => Ok(Some(prefix)),
-    //         None => Ok(None),
-    //     }
-    // }
+    fn parse_command_prefix(&mut self) -> Result<Option<Node>> {
+        match self
+            .parse_variable()
+            .or_else(|| self.parse_string().or_else(|| self.parse_number()))
+        {
+            Some(prefix) => Ok(Some(prefix)),
+            None => Ok(None),
+        }
+    }
 
     fn parse_variable(&mut self) -> Option<Node> {
         match self.lexer.next_if(|token| matches!(token, Token::Ident(_))) {
