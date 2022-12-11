@@ -45,24 +45,15 @@ impl Parser {
     //     }
     // }
 
-    // fn parse_variable(&mut self) -> Result<Option<Node>> {
-    // if self.lexer.next_if_eq(&Token::Dollar).is_none() {
-    //     return Ok(None);
-    // }
-
-    // match self.lexer.next() {
-    //     Some(token) => match token {
-    //         Token::String(string) => Ok(Some(Node::VariableExpression(string))),
-    //         _ => Err(Error::new(ErrorKind::IllegalSyntax, "".to_owned())),
-    //     },
-    //     None => Err(Error::new(ErrorKind::IllegalSyntax, "".to_owned())),
-    // }
-
-    //     match self.parse_string().or_else(|| self.parse_number()) {
-    //         Some(node) => Ok(Some(Node::Variable(Box::new(node)))),
-    //         None => Err(Error::new(ErrorKind::IllegalSyntax, "".to_owned())),
-    //     }
-    // }
+    fn parse_variable(&mut self) -> Option<Node> {
+        match self.lexer.next_if(|token| matches!(token, Token::Ident(_))) {
+            Some(token) => match token {
+                Token::Ident(string) => Some(Node::Variable(string)),
+                _ => None,
+            },
+            None => None,
+        }
+    }
 
     fn parse_string(&mut self) -> Option<Node> {
         match self
@@ -100,7 +91,7 @@ impl Parser {
         }
     }
 
-    pub fn parse_redirect(&mut self) -> Result<Option<Node>> {
+    fn parse_redirect(&mut self) -> Result<Option<Node>> {
         let mut kind: Option<RedirectKind> = None;
         let mut left: Option<Node> = None;
         let mut right: Option<Node> = None;
@@ -133,7 +124,6 @@ impl Parser {
         redirect.insert_right(right.unwrap());
         Ok(Some(Node::Redirect(redirect)))
     }
-   
 }
 
 #[derive(Debug, Clone)]
