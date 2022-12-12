@@ -4,23 +4,26 @@ use std::io;
 use std::io::Write;
 use std::process::exit;
 
-pub struct Terminal<'a> {
+pub struct Terminal {
     buffer: Vec<u8>,
     buffer_index: usize,
-    stdout: io::BufWriter<io::StdoutLock<'a>>,
     prompt: String,
     origin_termios: libc::termios,
 }
 
-impl Terminal<'_> {
+impl Terminal {
     pub fn new() -> Self {
         Self {
             buffer: Vec::new(),
             buffer_index: 0,
-            stdout: io::BufWriter::new(io::stdout().lock()),
+
             prompt: String::new(),
             origin_termios: termios(),
         }
+    }
+
+    pub fn prompt(&mut self, string: String) {
+        self.prompt = string
     }
 
     pub fn read_line(&mut self) -> io::Result<String> {
@@ -28,8 +31,10 @@ impl Terminal<'_> {
 
         self.init_buffer()?;
 
+        let mut stdout = io::BufWriter::new(io::stdout().lock());
+
         loop {
-            self.stdout.flush()?;
+            stdout.flush()?;
 
             if let Some(char) = getch() {
                 match char {
@@ -54,26 +59,105 @@ impl Terminal<'_> {
                             66 => {}
 
                             //right
-                            67 => self.goto_right()?,
+                            67 => {
+                                if self.buffer_index < self.buffer.len() {
+                                    self.buffer_index += 1;
+                                    stdout.write_all(
+                                        format!("{}", Cursor::Right.get_esc_code()).as_bytes(),
+                                    )?;
+                                }
+                            }
 
                             //left
-                            68 => self.goto_left()?,
+                            68 => {
+                                if self.buffer_index > 0 {
+                                    stdout.write_all(
+                                        format!("{}", Cursor::Left.get_esc_code()).as_bytes(),
+                                    )?;
+                                    self.buffer_index -= 1;
+                                }
+                            }
                             _ => continue,
                         }
                     }
 
                     127 => {
-                        self.backspace()?;
+                        if self.buffer_index <= 0 {
+                            continue;
+                        }
+
+                        self.buffer_index -= 1;
+
+                        for i in 0..self.buffer.len() {
+                            if i != 0 {
+                                stdout.write_all(
+                                    format!("{}", Cursor::Backspace.get_esc_code()).as_bytes(),
+                                )?;
+                            }
+                        }
+
+                        stdout.write_all(
+                            format!("\r{}{}", self.prompt, String::from_utf8_lossy(&self.buffer))
+                                .as_bytes(),
+                        )?;
+
+                        self.buffer.remove(self.buffer_index);
+
+                        stdout.write_all(
+                            format!("{}", Cursor::Backspace.get_esc_code()).as_bytes(),
+                        )?;
+                        stdout.write_all(
+                            format!(
+                                "\r{}{}",
+                                self.prompt,
+                                String::from_utf8_lossy(&self.buffer).to_string()
+                            )
+                            .as_bytes(),
+                        )?;
+
+                        if self.buffer_index < self.buffer.len() {
+                            let move_position = self.prompt.len() + self.buffer_index - 1;
+                            stdout.write_all(
+                                format!("{}", Cursor::Move(move_position).get_esc_code())
+                                    .as_bytes(),
+                            )?;
+                        }
                     }
 
-                    _ => self.insert(char)?,
+                    _ => {
+                        self.buffer.insert(self.buffer_index, char);
+
+                        self.buffer_index += 1;
+
+                        for i in 0..self.buffer.len() {
+                            if i != 0 {
+                                stdout.write_all(
+                                    format!("{}", Cursor::Backspace.get_esc_code()).as_bytes(),
+                                )?;
+                            }
+                        }
+
+                        stdout.write_all(
+                            format!("\r{}{}", self.prompt, String::from_utf8_lossy(&self.buffer))
+                                .as_bytes(),
+                        )?;
+
+                        if self.buffer_index < self.buffer.len() {
+                            let move_position = self.prompt.len() + self.buffer_index;
+
+                            stdout.write_all(
+                                format!("{}", Cursor::Move(move_position).get_esc_code())
+                                    .as_bytes(),
+                            )?;
+                        }
+                    }
                 }
             }
         }
 
         self.unset_raw_mode();
 
-        self.stdout.write_all(b"\n")?;
+        stdout.write_all(b"\n")?;
 
         Ok(self.get_utf8_str().to_string())
     }
@@ -82,98 +166,16 @@ impl Terminal<'_> {
         String::from_utf8_lossy(&self.buffer)
     }
 
-    fn insert(&mut self, char: u8) -> io::Result<()> {
-        self.buffer.insert(self.buffer_index, char);
-
-        self.buffer_index += 1;
-
-        for i in 0..self.buffer.len() {
-            if i != 0 {
-                self.stdout
-                    .write_all(format!("{}", Cursor::Backspace.get_esc_code()).as_bytes())?;
-            }
-        }
-
-        self.stdout.write_all(
-            format!("\r{}{}", self.prompt, String::from_utf8_lossy(&self.buffer)).as_bytes(),
-        )?;
-
-        if self.buffer_index < self.buffer.len() {
-            let move_position = self.prompt.len() + self.buffer_index;
-
-            self.stdout
-                .write_all(format!("{}", Cursor::Move(move_position).get_esc_code()).as_bytes())?;
-        }
-        Ok(())
-    }
-
-    fn goto_left(&mut self) -> io::Result<()> {
-        if self.buffer_index > 0 {
-            self.stdout
-                .write_all(format!("{}", Cursor::Left.get_esc_code()).as_bytes())?;
-            self.buffer_index -= 1;
-        }
-        Ok(())
-    }
-
-    fn goto_right(&mut self) -> io::Result<()> {
-        if self.buffer_index < self.buffer.len() {
-            self.buffer_index += 1;
-            self.stdout
-                .write_all(format!("{}", Cursor::Right.get_esc_code()).as_bytes())?;
-        }
-
-        Ok(())
-    }
-
-    fn backspace(&mut self) -> io::Result<()> {
-        if self.buffer_index <= 0 {
-            return Ok(());
-        }
-
-        self.buffer_index -= 1;
-
-        for i in 0..self.buffer.len() {
-            if i != 0 {
-                self.stdout
-                    .write_all(format!("{}", Cursor::Backspace.get_esc_code()).as_bytes())?;
-            }
-        }
-
-        self.stdout.write_all(
-            format!("\r{}{}", self.prompt, String::from_utf8_lossy(&self.buffer)).as_bytes(),
-        )?;
-
-        self.buffer.remove(self.buffer_index);
-
-        self.stdout
-            .write_all(format!("{}", Cursor::Backspace.get_esc_code()).as_bytes())?;
-        self.stdout.write_all(
-            format!(
-                "\r{}{}",
-                self.prompt,
-                String::from_utf8_lossy(&self.buffer).to_string()
-            )
-            .as_bytes(),
-        )?;
-
-        if self.buffer_index < self.buffer.len() {
-            let move_position = self.prompt.len() + self.buffer_index - 1;
-            self.stdout
-                .write_all(format!("{}", Cursor::Move(move_position).get_esc_code()).as_bytes())?;
-        }
-
-        Ok(())
-    }
-
     fn init_buffer(&mut self) -> io::Result<()> {
+        let mut stdout = io::BufWriter::new(io::stdout().lock());
+
         self.buffer.clear();
 
         self.buffer_index = 0;
 
         if self.buffer_index <= self.buffer.len() {
             let move_position = self.prompt.len() + 1;
-            self.stdout.write_all(
+            stdout.write_all(
                 format!(
                     "\r{}{}",
                     self.prompt,
