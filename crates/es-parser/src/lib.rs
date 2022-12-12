@@ -1,10 +1,11 @@
+pub mod error;
 pub mod lexer;
 pub mod token;
+use crate::error::Error;
+use crate::error::ErrorKind;
+use crate::error::Result;
 use crate::lexer::Lexer;
 use crate::token::Token;
-use es_error::Error;
-use es_error::ErrorKind;
-use es_error::Result;
 use std::iter::Peekable;
 
 pub struct Parser {
@@ -53,7 +54,7 @@ impl Parser {
                 if self.lexer.peek().is_some() {
                     Err(Error::new(
                         ErrorKind::IllegalSyntax,
-                        format!("unknown token: {}", self.lexer.peek().unwrap()),
+                        format!("IllegalSyntax token: {}", self.lexer.peek().unwrap()),
                     ))?;
                 } else {
                     break;
