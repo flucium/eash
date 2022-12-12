@@ -7,4 +7,3 @@ edition = "2021"
 
 
 [dependencies]
-es-error={path="../es-error",version="0.0.1"}
