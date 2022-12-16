@@ -27,4 +27,5 @@ impl Error {
 #[derive(Debug, Clone)]
 pub enum ErrorKind {
     Unknown,
+    ExecutionFailed
 }
