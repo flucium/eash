@@ -1,84 +1,178 @@
 use crate::token::Token;
-use std::collections::VecDeque;
+
 pub struct Lexer {
-    input: VecDeque<char>,
-}
-
-impl Iterator for Lexer {
-    type Item = Token;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.pop_front()
-    }
+    input: Vec<char>,
+    position: usize,
 }
 
 impl Lexer {
-    pub fn new(input: &str) -> Self {
+    pub fn new(string: &str) -> Self {
         Self {
-            input: input.chars().collect(),
+            input: string.chars().collect(),
+            position: 0,
         }
     }
 
-    fn pop_front(&mut self) -> Option<Token> {
-        while let Some(ch) = self.input.pop_front() {
+    fn read(&mut self) -> Option<Token> {
+        while let Some(ch) = self.input.get(self.position) {
             if ch.is_whitespace() {
+                self.position += 1;
                 continue;
             }
 
             match ch {
-                '#' => {
-                    while let Some(ch) = self.input.pop_front() {
-                        if ch == '\n' {
-                            break;
-                        }
+                '#' => self.skip_commentout(),
+
+                // pipe ∨ or
+                '|' => {
+                    if matches!(self.peek(), Some('|')) {
+                        self.position += 2;
+                        return Some(Token::OR);
                     }
+
+                    self.position += 1;
+
+                    return Some(Token::Pipe);
                 }
-                ';' => return Some(Token::Semicolon),
-                '=' => return Some(Token::Equal),
-                '|' => return Some(Token::Pipe),
-                '>' => return Some(Token::Gt),
-                '<' => return Some(Token::Lt),
-                // '&' => {return Some(Token::Ampersand)},
-                '&' => {
-                    if matches!(self.input.get(0), Some('0'..='9')) {
-                        let mut string = self.read_string(false);
 
-                        if let Ok(n) = string.parse::<u32>() {
-                            return Some(Token::FD(n));
-                        }
+                // assign ∨ equal
+                '=' => {
+                    
 
-                        while let Some(ch) =string.pop(){
-                            self.input.push_front(ch)
-                        }
+                    if matches!(self.peek(), Some('=')) {
+                        self.position += 2;
+                        return Some(Token::Equal);
                     }
 
-                    return Some(Token::Ampersand);
+                    self.position += 1;
+
+                    return Some(Token::Assign);
                 }
-                '$' => {
-                    // input[0] == (a - z || A - Z || 0 - 9)
-                    if matches!(
-                        self.input.get(0),
-                        Some('a'..='z') | Some('A'..='Z') | Some('0'..='9')
-                    ) {
-                        return Some(Token::Ident(self.read_string(false)));
+
+                // semicolon
+                ';' => {
+                    self.position += 1;
+                    return Some(Token::Semicolon);
+                }
+
+                // comma
+                ',' => {
+                    self.position += 1;
+                    return Some(Token::Comma);
+                }
+
+                // bang ∨ notequal
+                '!' => {
+                    
+                    if matches!(self.peek(), Some('=')) {
+                        self.position += 2;
+                        return Some(Token::NotEqual);
                     }
 
+                    self.position += 1;
+                    return Some(Token::Bang);
+                }
+
+                // gt
+                '>' => {
+                    self.position += 1;
+                    return Some(Token::Gt);
+                }
+
+                // lt
+                '<' => {
+                    self.position += 1;
+                    return Some(Token::Lt);
+                }
+
+                // dollar ∨ ident
+                '$' => {                    
+                    if let Some(ch) = self.peek() {
+                        if ch.is_whitespace() == false {
+                            self.position += 1;
+                            if let Some(string) = self.read_string(false) {
+                                return Some(Token::Ident(string));
+                            }
+                        }
+                    }
+
+                    self.position += 1;
                     return Some(Token::Dollar);
                 }
-                '"' => return Some(Token::String(self.read_string(true))),
-                // ch @ '0'..='9' => {
 
-                // }
-                _ => {
-                    let mut string = String::from(ch);
+                // ampersand ∨ and ∨ fd
+                '&' => {
+                    
 
-                    string.push_str(&self.read_string(false));
-
-                    if let Ok(n) = string.parse::<isize>() {
-                        return Some(Token::Number(n));
+                    if matches!(self.peek(), Some('&')) {
+                        self.position += 2;
+                        return Some(Token::AND);
                     }
 
-                    return Some(Token::String(string));
+                    if let Some(ch) = self.peek() {
+                        if ch.is_whitespace() == false {
+                            self.position += 1;
+                            if let Some(n) = self.read_u32() {
+                                {
+                                    return Some(Token::FD(n));
+                                }
+                            }
+                        }
+                    }
+
+                    self.position += 1;
+                    return Some(Token::Ampersand);
+                }
+
+                // left paren
+                '(' => {
+                    self.position += 1;
+                    return Some(Token::LParen);
+                }
+
+                // right paren
+                ')' => {
+                    self.position += 1;
+                    return Some(Token::RParen);
+                }
+
+                // left brace
+                '{' => {
+                    self.position += 1;
+                    return Some(Token::LBrace);
+                }
+
+                // right brace
+                '}' => {
+                    self.position += 1;
+                    return Some(Token::RBrace);
+                }
+
+                '"' => {
+                    self.position += 1;
+
+                    match self.read_string(true) {
+                        Some(string) => return Some(Token::String(string)),
+                        None => break,
+                    }
+                }
+
+                _ => {
+                    if let Some(number) = self.read_number() {
+                        return Some(Token::Number(number));
+                    }
+
+                    if let Some(string) = self.read_string(false) {
+                        match string.as_str() {
+                            "loop" => return Some(Token::Loop),
+                            "if" => return Some(Token::If),
+                            "elif" => return Some(Token::Elif),
+                            "else" => return Some(Token::Else),
+                            "def" => return Some(Token::Def),
+                            "return" => return Some(Token::Return),
+                            _ => return Some(Token::String(string)),
+                        }
+                    }
                 }
             }
         }
@@ -86,24 +180,83 @@ impl Lexer {
         None
     }
 
-    fn read_string(&mut self, esc: bool) -> String {
-        let mut string_buffer = String::new();
+    fn read_u32(&mut self) -> Option<u32> {
+        let origin = self.position;
 
-        while let Some(ch) = self.input.pop_front() {
+        match self.read_string(false)?.parse::<u32>() {
+            Ok(n) => Some(n),
+            Err(_) => {
+                self.position = origin;
+                None
+            }
+        }
+    }
+
+    fn read_number(&mut self) -> Option<isize> {
+        let origin = self.position;
+
+        match self.read_string(false)?.parse::<isize>() {
+            Ok(n) => Some(n),
+            Err(_) => {
+                self.position = origin;
+                None
+            }
+        }
+    }
+
+    fn read_string(&mut self, esc: bool) -> Option<String> {
+        let mut string = String::new();
+
+        while let Some(ch) = self.input.get(self.position) {
             if esc {
-                if ch == '"' {
+                if ch == &'"' {
+                    self.position += 1;
                     break;
                 }
             } else {
-                if ch.is_whitespace() || matches!(ch, ';' | '=' | '|' | '>' | '<') {
-                    self.input.push_front(ch);
+                if ch.is_whitespace()
+                    || matches!(
+                        ch,
+                        ';' | ',' | '=' | '|' | '>' | '<' | '(' | ')' | '{' | '}'
+                    )
+                {
                     break;
                 }
             }
 
-            string_buffer.push(ch);
+            self.position += 1;
+            string.push(*ch);
         }
 
-        string_buffer
+        if string.is_empty() {
+            None
+        } else {
+            Some(string)
+        }
+    }
+
+    fn peek(&self) -> Option<&char> {
+        self.input.get(self.position + 1)
+    }
+
+    fn skip_commentout(&mut self) {
+        if matches!(self.input.get(self.position), Some('#')) == false {
+            return;
+        }
+
+        while let Some(ch) = self.input.get(self.position) {
+            self.position += 1;
+            if ch == &'\n' {
+                break;
+            }
+        }
+    }
+}
+
+impl Iterator for Lexer {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.read()
     }
 }
