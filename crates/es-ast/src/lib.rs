@@ -9,21 +9,21 @@ pub enum Statement {
 
 #[derive(Debug)]
 pub struct Loop {
-    comparison: Option<Comparison>,
-    block: Option<Block>,
+    comparison: Comparison,
+    block: Block,
 }
 
 #[derive(Debug)]
 pub struct If {
-    comparison: Option<Comparison>,
-    block: Option<Block>,
+    comparison: Comparison,
+    block: Block,
     child: Option<Box<Self>>,
 }
 
 #[derive(Debug)]
 pub struct Assign {
-    left: Option<Expression>,
-    right: Option<Expression>,
+    left: Expression,
+    right: Expression,
 }
 
 #[derive(Debug)]
@@ -46,21 +46,21 @@ pub enum Expression {
 
 #[derive(Debug)]
 pub struct Command {
-    prefix: Option<Box<Expression>>,
+    prefix: Box<Expression>,
     suffix: Option<CommandSuffix>,
 }
 
 #[derive(Debug)]
 pub struct CommandSuffix {
-    expr: Option<Box<Expression>>,
+    expr: Box<Expression>,
     suffix: Option<Box<Self>>,
 }
 
 #[derive(Debug)]
 pub struct Redirect {
     kind: RedirectKind,
-    left: Option<Box<Expression>>,
-    right: Option<Box<Expression>>,
+    left: Box<Expression>,
+    right: Box<Expression>,
 }
 
 #[derive(Debug)]
@@ -86,12 +86,11 @@ pub enum Comparison {
         right: Option<Box<Expression>>,
     },
     Gt {
-        left: Option<Box<Expression>>,
-        right: Option<Box<Expression>>,
+        left: Box<Expression>,
+        right: Box<Expression>,
     },
     Lt {
-        left: Option<Box<Expression>>,
-        right: Option<Box<Expression>>,
+        left: Box<Expression>,
+        right: Box<Expression>,
     },
 }
-
