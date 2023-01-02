@@ -7,3 +7,5 @@ edition = "2021"
 
 
 [dependencies]
+es-type={path="../es-type",version="0.0.1"}
+es-ast={path="../es-ast",version="0.0.1"}
