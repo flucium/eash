@@ -3,6 +3,7 @@ use crate::token::Token;
 pub struct Lexer {
     input: Vec<char>,
     position: usize,
+    is_eof: bool,
 }
 
 impl Lexer {
@@ -10,6 +11,7 @@ impl Lexer {
         Self {
             input: string.chars().collect(),
             position: 0,
+            is_eof: false,
         }
     }
 
@@ -22,6 +24,8 @@ impl Lexer {
 
             match ch {
                 '#' => self.skip_commentout(),
+
+                '\n' => return Some(Token::EOL),
 
                 // pipe ∨ or
                 '|' => {
@@ -37,8 +41,6 @@ impl Lexer {
 
                 // assign ∨ equal
                 '=' => {
-                    
-
                     if matches!(self.peek(), Some('=')) {
                         self.position += 2;
                         return Some(Token::Equal);
@@ -63,7 +65,6 @@ impl Lexer {
 
                 // bang ∨ notequal
                 '!' => {
-                    
                     if matches!(self.peek(), Some('=')) {
                         self.position += 2;
                         return Some(Token::NotEqual);
@@ -86,7 +87,7 @@ impl Lexer {
                 }
 
                 // dollar ∨ ident
-                '$' => {                    
+                '$' => {
                     if let Some(ch) = self.peek() {
                         if ch.is_whitespace() == false {
                             self.position += 1;
@@ -102,8 +103,6 @@ impl Lexer {
 
                 // ampersand ∨ and ∨ fd
                 '&' => {
-                    
-
                     if matches!(self.peek(), Some('&')) {
                         self.position += 2;
                         return Some(Token::AND);
@@ -177,7 +176,13 @@ impl Lexer {
             }
         }
 
-        None
+        match self.is_eof {
+            true => None,
+            false => {
+                self.is_eof = true;
+                Some(Token::EOF)
+            }
+        }
     }
 
     fn read_u32(&mut self) -> Option<u32> {
