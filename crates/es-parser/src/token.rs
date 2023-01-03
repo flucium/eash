@@ -4,6 +4,8 @@ use std::fmt::Result;
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Token {
+    EOF,
+
     Pipe, // |
 
     Assign, // =
@@ -51,6 +53,7 @@ pub enum Token {
 impl Display for Token {
     fn fmt(&self, tkn: &mut Formatter) -> Result {
         match self {
+            Token::EOF => write!(tkn, "EOF"),
             Token::Pipe => write!(tkn, "|"),
             Token::Assign => write!(tkn, "="),
             Token::Equal => write!(tkn, "=="),
