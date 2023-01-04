@@ -79,13 +79,13 @@ macro_rules! parse_command {
                     break;
                 }
 
-                // Redirect どうすんだよ　おい
+                // Redirect どうすんだよおおおお
                 $crate::token::Token::FD(fd)=>{}
 
                 $crate::token::Token::Gt=>{}
 
                 $crate::token::Token::Lt=>{}
-                
+
 
 
                 $crate::token::Token::Semicolon | $crate::token::Token::Pipe | $crate::token::Token::EOL | $crate::token::Token::EOF => break,
