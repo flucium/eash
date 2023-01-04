@@ -49,7 +49,7 @@ pub enum Token {
     String(String), // hello
     Ident(String),  // $a , &b
     Number(isize),  // 0 ~ 9
-    FD(u32),        // 0 ~ 9
+    FD(i32),        // 0 ~ 9
 }
 
 impl Display for Token {
