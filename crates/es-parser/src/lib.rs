@@ -23,13 +23,19 @@ impl Parser {
     }
 }
 
-
-
+#[macro_export]
+macro_rules! parse_assign {
+    ($($x:tt)*) => {};
+}
 
 #[macro_export]
 macro_rules! parse_command {
 
     ($($x:tt)*)=>{{
+
+        if $($x)*.is_empty(){
+            return
+        }
 
         let mut lexer = $crate::lexer::Lexer::new($($x)*);
 
@@ -44,6 +50,10 @@ macro_rules! parse_command {
 
             Some($crate::token::Token::Number(number))=>{
                 es_ast::Expression::Number(number.to_owned())
+            }
+
+            Some($crate::token::Token::EOL)|Some($crate::token::Token::EOF)=>{
+                return
             }
 
             _=>{
@@ -70,9 +80,9 @@ macro_rules! parse_command {
                 }
 
                 $crate::token::Token::Semicolon | $crate::token::Token::Pipe | $crate::token::Token::EOL | $crate::token::Token::EOF => break,
-                
+
                 // Redirect どうすんだよ
-                
+
                 _=> {
                     panic!("パニックだ 2")
                 }
