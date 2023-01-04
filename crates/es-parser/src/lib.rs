@@ -79,9 +79,16 @@ macro_rules! parse_command {
                     break;
                 }
 
-                $crate::token::Token::Semicolon | $crate::token::Token::Pipe | $crate::token::Token::EOL | $crate::token::Token::EOF => break,
+                // Redirect どうすんだよ　おい
+                $crate::token::Token::FD(fd)=>{}
 
-                // Redirect どうすんだよ
+                $crate::token::Token::Gt=>{}
+
+                $crate::token::Token::Lt=>{}
+                
+
+
+                $crate::token::Token::Semicolon | $crate::token::Token::Pipe | $crate::token::Token::EOL | $crate::token::Token::EOF => break,
 
                 _=> {
                     panic!("パニックだ 2")
@@ -90,8 +97,6 @@ macro_rules! parse_command {
         }
 
 
-
         es_ast::Expression::Command(command)
-
     }};
 }
