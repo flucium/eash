@@ -198,17 +198,17 @@ impl Lexer {
         }
     }
 
-    fn read_i32(&mut self) -> Option<i32> {
-        let origin = self.position;
+    // fn read_i32(&mut self) -> Option<i32> {
+    //     let origin = self.position;
 
-        match self.read_string(false)?.parse::<i32>() {
-            Ok(n) => Some(n),
-            Err(_) => {
-                self.position = origin;
-                None
-            }
-        }
-    }
+    //     match self.read_string(false)?.parse::<i32>() {
+    //         Ok(n) => Some(n),
+    //         Err(_) => {
+    //             self.position = origin;
+    //             None
+    //         }
+    //     }
+    // }
 
     fn read_number(&mut self) -> Option<isize> {
         let origin = self.position;
