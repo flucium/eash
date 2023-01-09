@@ -1,5 +1,6 @@
 use crate::token::Token;
 
+#[derive(Debug)]
 pub struct Lexer {
     input: Vec<char>,
     position: usize,
@@ -14,7 +15,7 @@ impl Lexer {
             is_eof: false,
         }
     }
-
+    
     fn read(&mut self) -> Option<Token> {
         while let Some(ch) = self.input.get(self.position) {
             if ch.is_whitespace() {
@@ -189,6 +190,18 @@ impl Lexer {
         let origin = self.position;
 
         match self.read_string(false)?.parse::<u32>() {
+            Ok(n) => Some(n),
+            Err(_) => {
+                self.position = origin;
+                None
+            }
+        }
+    }
+
+    fn read_i32(&mut self) -> Option<i32> {
+        let origin = self.position;
+
+        match self.read_string(false)?.parse::<i32>() {
             Ok(n) => Some(n),
             Err(_) => {
                 self.position = origin;
