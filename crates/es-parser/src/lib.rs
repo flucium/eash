@@ -18,7 +18,7 @@ impl Parser {
             lexer: lexer.peekable(),
         }
     }
-    
+
     fn parse_assign(&mut self) -> Result<Statement> {
         let identify = self.parse_variable()?;
 
@@ -34,7 +34,6 @@ impl Parser {
     }
 
     fn parse_command(&mut self) -> Result<Expression> {
-        
         let mut command = Command::new(
             self.parse_string()
                 .or(self.parse_number())
