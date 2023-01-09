@@ -5,82 +5,117 @@ use error::*;
 use es_ast::*;
 use lexer::*;
 use std::iter::Peekable;
+use std::mem;
 use token::*;
 
-pub fn parse_command(tokens: &[Token]) -> Result<Expression> {
-    let token = match tokens.get(0) {
-        Some(token) => token,
-        None => Err(Error::new(ErrorKind::Unknown, "".to_owned()))?,
-    };
+pub struct Parser {
+    lexer: Peekable<Lexer>,
+}
 
-    let prefix = match parse_string(token)
-        .or(parse_number(token))
-        .or(parse_variable(token))
-    {
-        Ok(prefix) => prefix,
-        Err(err) => Err(err)?,
-    };
-
-    let mut command = Command::new(prefix);
-
-    tokens[1..].iter().for_each(|token| {
-        if let Ok(expr) = parse_string(token)
-            .or(parse_number(token))
-            .or(parse_variable(token))
-        {
-            command.insert_suffix(expr);
-        } else {
-            panic!("")
+impl Parser {
+    pub fn new(lexer: Lexer) -> Self {
+        Self {
+            lexer: lexer.peekable(),
         }
-    });
-
-    Ok(Expression::Command(command))
-}
-
-fn parse_variable(token: &Token) -> Result<Expression> {
-    match token {
-        Token::Ident(ident) => Ok(Expression::Variable(ident.to_owned())),
-        _ => Err(Error::new(ErrorKind::Unknown, "".to_owned())),
     }
-}
+    
+    fn parse_assign(&mut self) -> Result<Statement> {
+        let identify = self.parse_variable()?;
 
-fn parse_string(token: &Token) -> Result<Expression> {
-    match token {
-        Token::String(string) => Ok(Expression::String(string.to_owned())),
-        _ => Err(Error::new(ErrorKind::Unknown, "".to_owned())),
+        if self.lexer.next() != Some(Token::Assign) {
+            Err(Error::new(ErrorKind::Unknown, "".to_owned()))?
+        }
+
+        let expr = self
+            .parse_variable()
+            .or(self.parse_string().or(self.parse_number()))?;
+
+        Ok(Statement::Assign(Assign::new(identify, expr)))
     }
-}
 
-fn parse_number(token: &Token) -> Result<Expression> {
-    match token {
-        Token::Number(number) => Ok(Expression::Number(number.to_owned())),
-        _ => Err(Error::new(ErrorKind::Unknown, "".to_owned())),
-    }
-}
+    fn parse_command(&mut self) -> Result<Expression> {
+        
+        let mut command = Command::new(
+            self.parse_string()
+                .or(self.parse_number())
+                .or(self.parse_variable())?,
+        );
 
-fn parse_close_fd(token: &Token) -> Result<Expression> {
-    match token {
-        Token::FD(fd) => {
-            if fd < &0 {
-                Ok(es_ast::Expression::FD(fd.to_owned()))
-            } else {
-                Err(Error::new(ErrorKind::Unknown, "".to_owned()))
+        loop {
+            if let Ok(expr) = self.parse_string() {
+                command.insert_suffix(expr);
+                continue;
             }
-        }
-        _ => Err(Error::new(ErrorKind::Unknown, "".to_owned())),
-    }
-}
 
-fn parse_fd(token: &Token) -> Result<Expression> {
-    match token {
-        Token::FD(fd) => {
-            if fd >= &0 {
-                Ok(es_ast::Expression::FD(fd.to_owned()))
-            } else {
-                Err(Error::new(ErrorKind::Unknown, "".to_owned()))
+            if let Ok(expr) = self.parse_number() {
+                command.insert_suffix(expr);
+                continue;
             }
+
+            if let Ok(expr) = self.parse_variable() {
+                command.insert_suffix(expr);
+                continue;
+            }
+
+            if let Ok(expr) = self.parse_redirect() {
+                command.insert_suffix(expr);
+                continue;
+            }
+
+            break;
         }
-        _ => Err(Error::new(ErrorKind::Unknown, "".to_owned())),
+
+        Ok(Expression::Command(command))
+    }
+
+    fn parse_redirect(&mut self) -> Result<Expression> {
+        let left = self.parse_fd()?;
+
+        let kind = match self.lexer.next() {
+            Some(Token::Gt) => RedirectKind::Write,
+            Some(Token::Lt) => RedirectKind::Read,
+            _ => Err(Error::new(ErrorKind::Unknown, "".to_owned()))?,
+        };
+
+        let right = self
+            .parse_string()
+            .or(self.parse_number())
+            .or(self.parse_variable())?;
+
+        Ok(Expression::Redirect(Redirect::new(kind, left, right)))
+    }
+
+    fn parse_fd(&mut self) -> Result<Expression> {
+        match self.next_token(Token::FD(0)) {
+            Some(Token::FD(number)) => Ok(Expression::FD(number)),
+            _ => Err(Error::new(ErrorKind::Unknown, "".to_owned())),
+        }
+    }
+
+    fn parse_number(&mut self) -> Result<Expression> {
+        match self.next_token(Token::Number(0)) {
+            Some(Token::Number(number)) => Ok(Expression::Number(number)),
+            _ => Err(Error::new(ErrorKind::Unknown, "".to_owned())),
+        }
+    }
+
+    fn parse_variable(&mut self) -> Result<Expression> {
+        match self.next_token(Token::Ident(String::default())) {
+            Some(Token::Ident(string)) => Ok(Expression::Variable(string)),
+            _ => Err(Error::new(ErrorKind::Unknown, "".to_owned())),
+        }
+    }
+
+    fn parse_string(&mut self) -> Result<Expression> {
+        match self.next_token(Token::String(String::default())) {
+            Some(Token::String(string)) => Ok(Expression::String(string)),
+            _ => Err(Error::new(ErrorKind::Unknown, "".to_owned())),
+        }
+    }
+
+    fn next_token(&mut self, token: Token) -> Option<Token> {
+        self.lexer
+            .next_if(|tkn| mem::discriminant(tkn) == mem::discriminant(&token))
     }
 }
 
