@@ -16,6 +16,9 @@ es-parser={version="0.0.1",path="./crates/es-parser"}
 es-terminal={version="0.0.1",path="./crates/es-terminal"}
 es-manifest={version="0.0.1",path="./crates/es-manifest"}
 es-engine={version="0.0.1",path="./crates/es-engine"}
+es-type={version="0.0.1",path="./crates/es-type"}
+es-ast={version="0.0.1",path="./crates/es-ast"}
+es-glob={version="0.0.1",path="./crates/es-glob"}
 
 
 libc = "0.2.138"
