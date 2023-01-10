@@ -1,3 +1,3 @@
 pub mod error;
-pub mod eval;
+pub mod evaluator;
 pub mod builtin;
