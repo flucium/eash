@@ -149,7 +149,9 @@ pub enum Expression {
     String(String),
     Variable(String),
     Number(isize),
-    FD(i32),
+    Background(bool),
+    Boolean(bool),
+    FD(u32),
     Command(Command),
     Redirect(Redirect),
     Pipe(Pipe),
@@ -170,8 +172,14 @@ impl Command {
         }
     }
 
-    pub fn insert_suffix(&mut self, suffix: CommandSuffix) {
-        self.suffix = Some(suffix);
+    pub fn insert_suffix(&mut self, expr: Expression) {
+        if let Some(suffix) = self.suffix.as_mut() {
+            suffix.insert(expr);
+        } else {
+            let mut suffix = CommandSuffix::new();
+            suffix.insert(expr);
+            self.suffix = Some(suffix);
+        }
     }
 
     pub fn prefix(&self) -> &Expression {
@@ -188,24 +196,38 @@ impl Command {
 
 #[derive(Debug)]
 pub struct CommandSuffix {
-    expr: Box<Expression>,
+    expr: Option<Box<Expression>>,
     suffix: Option<Box<Self>>,
 }
 
 impl CommandSuffix {
-    pub fn new(expr: Expression) -> Self {
+    pub fn new() -> Self {
         Self {
-            expr: Box::new(expr),
+            expr: None,
             suffix: None,
         }
     }
 
-    pub fn insert(&mut self, suffix: CommandSuffix) {
-        self.suffix = Some(Box::new(suffix))
+    pub fn insert(&mut self, expr: Expression) {
+        if self.expr.is_none() {
+            self.expr = Some(Box::new(expr));
+        } else if self.suffix.is_none() {
+            self.suffix = Some(Box::new(CommandSuffix {
+                expr: Some(Box::new(expr)),
+                suffix: None,
+            }));
+        } else {
+            if let Some(suffix) = self.suffix.as_mut() {
+                suffix.insert(expr);
+            }
+        }
     }
 
-    pub fn expr(&self) -> &Expression {
-        &self.expr
+    pub fn expr(&self) -> Option<&Expression> {
+        match &self.expr {
+            Some(expr) => Some(&expr),
+            None => None,
+        }
     }
 
     pub fn suffix(&self) -> Option<&CommandSuffix> {
@@ -291,12 +313,12 @@ impl Pipe {
 #[derive(Debug)]
 pub enum Comparison {
     Equal {
-        left: Option<Box<Expression>>,
-        right: Option<Box<Expression>>,
+        left: Box<Expression>,
+        right: Box<Expression>,
     },
     NotEqual {
-        left: Option<Box<Expression>>,
-        right: Option<Box<Expression>>,
+        left: Box<Expression>,
+        right: Box<Expression>,
     },
     Gt {
         left: Box<Expression>,
@@ -307,4 +329,3 @@ pub enum Comparison {
         right: Box<Expression>,
     },
 }
-
