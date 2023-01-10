@@ -15,7 +15,8 @@ impl Lexer {
             is_eof: false,
         }
     }
-    
+
+
     fn read(&mut self) -> Option<Token> {
         while let Some(ch) = self.input.get(self.position) {
             if ch.is_whitespace() {
@@ -256,7 +257,7 @@ impl Lexer {
     fn peek(&self) -> Option<&char> {
         self.input.get(self.position + 1)
     }
-
+    
     fn skip_commentout(&mut self) {
         if matches!(self.input.get(self.position), Some('#')) == false {
             return;
