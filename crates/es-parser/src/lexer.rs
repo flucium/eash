@@ -7,6 +7,7 @@ pub struct Lexer {
     input: Vec<char>,
     position: usize,
     is_eof: bool,
+    prev: Option<Token>,
     peek: Option<Token>,
 }
 
@@ -16,12 +17,13 @@ impl Lexer {
             input: string.chars().collect(),
             position: 0,
             is_eof: false,
+            prev: None,
             peek: None,
         }
     }
 
     pub fn consume(&mut self) {
-        self.next();
+        self.prev = self.next();
     }
 
     pub fn next_is(&mut self, token: &Token) -> bool {
@@ -33,6 +35,10 @@ impl Lexer {
             Some(peek) => mem::discriminant(peek) == mem::discriminant(token),
             None => false,
         }
+    }
+
+    pub fn prev(&mut self) -> Option<&Token> {
+        self.prev.as_ref()
     }
 
     pub fn peek(&mut self) -> Option<&Token> {
@@ -303,9 +309,14 @@ impl Iterator for Lexer {
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(token) = self.peek.take() {
+            self.prev = Some(token.clone());
             return Some(token);
         }
 
-        self.read()
+        let token = self.read();
+
+        self.prev = token.clone();
+
+        token
     }
 }
