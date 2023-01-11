@@ -5,6 +5,7 @@ pub struct Lexer {
     input: Vec<char>,
     position: usize,
     is_eof: bool,
+    peek: Option<Token>,
 }
 
 impl Lexer {
@@ -13,9 +14,21 @@ impl Lexer {
             input: string.chars().collect(),
             position: 0,
             is_eof: false,
+            peek: None,
         }
     }
 
+    pub fn consume(&mut self) {
+        self.next();
+    }
+
+    pub fn peek(&mut self) -> Option<&Token> {
+        if self.peek.is_none() {
+            self.peek = self.read();
+        }
+
+        self.peek.as_ref()
+    }
 
     fn read(&mut self) -> Option<Token> {
         while let Some(ch) = self.input.get(self.position) {
@@ -31,7 +44,7 @@ impl Lexer {
 
                 // pipe ∨ or
                 '|' => {
-                    if matches!(self.peek(), Some('|')) {
+                    if matches!(self.peek_ch(), Some('|')) {
                         self.position += 2;
                         return Some(Token::OR);
                     }
@@ -43,7 +56,7 @@ impl Lexer {
 
                 // assign ∨ equal
                 '=' => {
-                    if matches!(self.peek(), Some('=')) {
+                    if matches!(self.peek_ch(), Some('=')) {
                         self.position += 2;
                         return Some(Token::Equal);
                     }
@@ -67,7 +80,7 @@ impl Lexer {
 
                 // bang ∨ notequal
                 '!' => {
-                    if matches!(self.peek(), Some('=')) {
+                    if matches!(self.peek_ch(), Some('=')) {
                         self.position += 2;
                         return Some(Token::NotEqual);
                     }
@@ -90,7 +103,7 @@ impl Lexer {
 
                 // dollar ∨ ident
                 '$' => {
-                    if let Some(ch) = self.peek() {
+                    if let Some(ch) = self.peek_ch() {
                         if ch.is_whitespace() == false {
                             self.position += 1;
                             if let Some(string) = self.read_string(false) {
@@ -105,12 +118,12 @@ impl Lexer {
 
                 // ampersand ∨ and ∨ fd
                 '&' => {
-                    if matches!(self.peek(), Some('&')) {
+                    if matches!(self.peek_ch(), Some('&')) {
                         self.position += 2;
                         return Some(Token::AND);
                     }
 
-                    if let Some(ch) = self.peek() {
+                    if let Some(ch) = self.peek_ch() {
                         if ch.is_whitespace() == false {
                             self.position += 1;
                             if let Some(n) = self.read_u32() {
@@ -254,10 +267,10 @@ impl Lexer {
         }
     }
 
-    fn peek(&self) -> Option<&char> {
+    fn peek_ch(&self) -> Option<&char> {
         self.input.get(self.position + 1)
     }
-    
+
     fn skip_commentout(&mut self) {
         if matches!(self.input.get(self.position), Some('#')) == false {
             return;
@@ -276,6 +289,12 @@ impl Iterator for Lexer {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
+        
+        if let Some(token)=self.peek.take(){
+            return Some(token)
+        }
+
         self.read()
     }
+
 }
