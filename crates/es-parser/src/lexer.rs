@@ -1,3 +1,5 @@
+use std::mem;
+
 use crate::token::Token;
 
 #[derive(Debug)]
@@ -20,6 +22,17 @@ impl Lexer {
 
     pub fn consume(&mut self) {
         self.next();
+    }
+
+    pub fn next_is(&mut self, token: &Token) -> bool {
+        if self.peek.is_none() {
+            self.peek();
+        }
+
+        match &self.peek {
+            Some(peek) => mem::discriminant(peek) == mem::discriminant(token),
+            None => false,
+        }
     }
 
     pub fn peek(&mut self) -> Option<&Token> {
@@ -289,12 +302,10 @@ impl Iterator for Lexer {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
-        
-        if let Some(token)=self.peek.take(){
-            return Some(token)
+        if let Some(token) = self.peek.take() {
+            return Some(token);
         }
 
         self.read()
     }
-
 }
