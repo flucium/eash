@@ -203,6 +203,8 @@ impl Lexer {
                             "elif" => return Some(Token::Elif),
                             "else" => return Some(Token::Else),
                             "def" => return Some(Token::Def),
+                            "true"=>return Some(Token::True),
+                            "false"=>return Some(Token::False),
                             "return" => return Some(Token::Return),
                             _ => return Some(Token::String(string)),
                         }
