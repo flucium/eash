@@ -172,14 +172,19 @@ impl Command {
         }
     }
 
-    pub fn insert_suffix(&mut self, expr: Expression) {
-        if let Some(suffix) = self.suffix.as_mut() {
-            suffix.insert(expr);
-        } else {
-            let mut suffix = CommandSuffix::new();
-            suffix.insert(expr);
-            self.suffix = Some(suffix);
-        }
+    // pub fn insert_suffix(&mut self, expr: Expression) {
+    //     if let Some(suffix) = self.suffix.as_mut() {
+    //         suffix.insert(expr);
+    //     } else {
+    //         let mut suffix = CommandSuffix::new();
+    //         suffix.insert(expr);
+    //         self.suffix = Some(suffix);
+    //     }
+    // }
+
+    pub fn insert_suffix(&mut self,suffix:CommandSuffix){
+        self.suffix = Some(suffix);
+        
     }
 
     pub fn prefix(&self) -> &Expression {
