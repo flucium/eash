@@ -6,10 +6,6 @@ use es_ast::*;
 use lexer::*;
 use token::*;
 
-pub fn parse() {
-    let lexer = &mut Lexer::new("a $A = hello").peekable();
-}
-
 pub struct Parser {
     lexer: Lexer,
 }
