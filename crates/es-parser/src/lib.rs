@@ -23,8 +23,24 @@ impl Parser {
 
     pub fn parse_assign(&mut self) {}
 
-    pub fn parse_command(&mut self) {
-        println!("{:?}", self.parse_command_prefix());
+    pub fn parse_command(&mut self) -> Result<Command> {
+        let prefix = match self.parse_command_prefix() {
+            Err(err) => Err(err)?,
+            Ok(prefix) => prefix,
+        };
+
+        let mut command = Command::new(prefix);
+
+        match self.parse_command_suffix() {
+            Err(err) => Err(err)?,
+            Ok(ok) => {
+                if let Some(suffix) = ok {
+                    command.insert_suffix(suffix);
+                }
+            }
+        }
+
+        Ok(command)
     }
 
     fn parse_command_suffix(&mut self) -> Result<Option<CommandSuffix>> {
@@ -103,7 +119,6 @@ impl Parser {
                     }
                 }
             }
-
 
             if self.lexer.next_is(&Token::Pipe)
                 || self.lexer.next_is(&Token::Semicolon)
